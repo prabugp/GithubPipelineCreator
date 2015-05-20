@@ -1,0 +1,4 @@
+git init
+git remote add origin $GIT_URL
+git fetch origin $GIT_BRANCH
+git reset --hard  $SHA

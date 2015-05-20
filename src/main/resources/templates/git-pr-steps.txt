@@ -1,0 +1,4 @@
+git init
+git remote add origin $GIT_URL
+git fetch origin '+refs/pull/$PULL_REQUEST/merge:'
+git reset --hard FETCH_HEAD

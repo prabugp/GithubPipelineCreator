@@ -1,0 +1,6 @@
+echo | java -version
+echo | mvn -version
+mvn clean
+mvn test
+mvn package
+mvn deploy
