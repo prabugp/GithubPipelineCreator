@@ -15,9 +15,9 @@
   <version>1.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
-  <name>TODO Plugin</name>
-  <description>TODO</description>
-  <url>https://wiki.jenkins-ci.org/display/JENKINS/TODO+Plugin</url>
+  <name>Github Pipeline Creator Plugin</name>
+  <description>Github Pipeline creator</description>
+  <url>https://github.com/prabugp/GithubPipelineCreator</url>
   <licenses>
     <license>
       <name>MIT License</name>
@@ -70,6 +70,11 @@
             <version>2.26</version>
         </dependency>
         <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>deploy</artifactId>
+            <version>1.10</version>
+        </dependency>
+        <dependency>
   <groupId>org.jenkins-ci.main</groupId>
   <artifactId>cli</artifactId>
   <version>1.613</version>
@@ -84,6 +89,11 @@
             <artifactId>httpclient</artifactId>
             <version>4.1</version>
         </dependency>
+        <dependency>
+    <groupId>com.google.code.gson</groupId>
+    <artifactId>gson</artifactId>
+    <version>1.7.1</version>
+  </dependency>
   </dependencies>
   
 

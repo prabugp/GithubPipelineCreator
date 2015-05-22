@@ -1,6 +1,5 @@
 package com.mckinsey.jenkins.GithubPipelineCreator.github.events.handlers;
 
-import hudson.model.Item;
 import hudson.model.ParameterValue;
 import hudson.model.AbstractProject;
 import hudson.model.ParametersAction;
@@ -13,7 +12,13 @@ import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.mckinsey.jenkins.GithubPipelineCreator.github.events.GitHubEvent;
+import com.mckinsey.jenkins.GithubPipelineCreator.jobs.JobRepository;
+import com.mckinsey.jenkins.GithubPipelineCreator.jobs.PropertyFileBasedJobRepository;
+import com.mckinsey.jenkins.GithubPipelineCreator.model.GitUrl;
+import com.mckinsey.jenkins.GithubPipelineCreator.pipelines.java.JavaPipeline;
 
 @GitHubEventHandler(eventHandled = GitHubEvent.PUSH)
 public class PushEventHandler implements EventHandler {
@@ -21,28 +26,41 @@ public class PushEventHandler implements EventHandler {
     private static final Logger LOGGER = Logger.getLogger(PullRequestEventHandler.class.getName());
 
     public PushEventHandler() {
-        // TODO Auto-generated constructor stub
     }
 
     @Override
     public void handleEvent(String payload) {
-        Jenkins jenkinsInstance = Jenkins.getInstance();
         LOGGER.finer("Received payload " + payload);
         // trigger pull request dry run build.
         JSONObject payloadJson = JSONObject.fromObject(payload);
         JSONObject repo = payloadJson.getJSONObject("repository");
-        String gitUrl = repo.getString("html_url");
-        String jobName = RepositoryEventHandler.jobsList.get(gitUrl);
-        for (Item item : jenkinsInstance.getAllItems()) {
-            System.out.println(item.getFullDisplayName());
+        String gitHtmlUrl = repo.getString("html_url");
+        GitUrl gitUrl = new GitUrl(gitHtmlUrl);
+        String commitSha = payloadJson.getJSONObject("head_commit").getString("id");
+
+        JobRepository jobRepository = new PropertyFileBasedJobRepository();
+        @SuppressWarnings("rawtypes")
+        AbstractProject project = jobRepository.getJobForGitEvent(gitUrl, GitHubEvent.PUSH);
+        if (project == null) {
+            // push event received, but no pipeline. create the pipeline and then trigger the job.
+            String createProject = new JavaPipeline().create(gitHtmlUrl);
+            if (StringUtils.isEmpty(createProject)) {
+                System.out.println("Pipeline not found and cannot be created for " + gitHtmlUrl);
+                System.out.println("Ignoring event!!");
+                return;
+            }
         }
-        for (Item item : jenkinsInstance.getAllItems(AbstractProject.class)) {
-            AbstractProject project = (AbstractProject) item;
-            List<ParameterValue> values = new ArrayList<ParameterValue>();
-            values.add(new StringParameterDefinition("GIT_URL", "").createValue("https://github.com/sscTest/b1.git"));
-            values.add(new StringParameterDefinition("GIT_BRANCH", "").createValue("master"));
-            values.add(new StringParameterDefinition("SHA", "").createValue("5523a35231a85bed892f5f5883b6514080fef612"));
+        System.out.println("Building for " + gitUrl.getHttpsUrl() + " -- " + "master branch for commit " + commitSha);
+        List<ParameterValue> values = new ArrayList<ParameterValue>();
+        values.add(new StringParameterDefinition("GIT_URL", "").createValue(gitUrl.getHttpsGitCheckOutUrl()));
+        values.add(new StringParameterDefinition("GIT_BRANCH", "").createValue("master"));
+        values.add(new StringParameterDefinition("SHA", "").createValue(commitSha));
+        project = jobRepository.getJobForGitEvent(gitUrl, GitHubEvent.PUSH);
+        if (project != null) {
+            System.out.println("Found job " + project.getName() + ". Enqueueing... ");
             Jenkins.getInstance().getQueue().schedule(project, 0, new ParametersAction(values));
+        } else {
+            System.out.println("Job not found for PUSH event for " + gitHtmlUrl);
         }
     }
 
